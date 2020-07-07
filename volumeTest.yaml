@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels: 
+   app: test-pd
+  name: test-pd
+spec:
+  containers:
+  - image: busybox
+    name: test-vol
+    command: ["/bin/sh", "-ec", "while :; do echo 'H' >> /test-pd/hello.txt; sleep 5 ; done"]
+    volumeMounts:
+    - mountPath: /test-pd
+      name: test-pvc
+  volumes:
+  - name: test-pvc
+    persistentVolumeClaim:
+      claimName: test-pvc
+  - name: test-volume
+    hostPath:
+      # directory location on host
+      path: /C/data
+      # this field is optional
+      type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 8Gi
+  storageClassName: local-storage1
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: test-pv
+spec:
+  capacity:
+    storage: 10Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local-storage1
+  local:
+    path: /C/data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - test-pd
